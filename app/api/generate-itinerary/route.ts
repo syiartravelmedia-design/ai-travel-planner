@@ -1,18 +1,34 @@
 import OpenAI from "openai";
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
-
 export async function POST(req: Request) {
   try {
     const { destination, days, budget, style } = await req.json();
 
+    // SAFE MODE
+    if (!process.env.OPENAI_API_KEY) {
+      return Response.json({
+        itinerary: [
+          {
+            day: 1,
+            pagi: "Demo Mode Aktif",
+            siang: "API key belum dikonfigurasi",
+            sore: "Website berhasil dideploy",
+            malam: "AI akan aktif setelah API key ditambahkan",
+            transport: "-",
+            estimasi: "-"
+          }
+        ]
+      });
+    }
+
+    const openai = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY,
+    });
+
     const prompt = `
 Buat itinerary perjalanan ${days} hari ke ${destination}.
-
 Budget total: Rp ${budget}
-Style: ${style}
+Gaya perjalanan: ${style}
 
 Format JSON:
 [
@@ -34,6 +50,7 @@ Format JSON:
         { role: "system", content: "Kamu adalah expert travel planner profesional." },
         { role: "user", content: prompt }
       ],
+      temperature: 0.7,
     });
 
     const text = completion.choices[0].message?.content || "[]";
@@ -44,6 +61,6 @@ Format JSON:
 
   } catch (error) {
     console.error(error);
-    return Response.json({ error: "Gagal generate" }, { status: 500 });
+    return Response.json({ error: "Gagal generate itinerary" }, { status: 500 });
   }
 }
